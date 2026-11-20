@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>법령 조항 조회 서비스</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans KR & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+          colors: {
+            gov: {
+              50: '#f0f5fa',
+              100: '#dce7f3',
+              200: '#bfd3ea',
+              600: '#1d4ed8',
+              700: '#1e3a8a',
+              800: '#172e6e',
+              900: '#0f1f4b',
+            },
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+  <!-- 상단 기관 스타일 헤더 -->
+  <header class="bg-gov-900 text-white border-b border-gov-800">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div class="inline-flex items-center gap-2 text-xs font-medium text-blue-200 bg-white/10 px-3 py-1 rounded-full mb-2.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+            </svg>
+            <span>법령 정보 조회 시스템</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            행정정보 통합관리 및 공동활용 법령 조항
+          </h1>
+          <p class="mt-1 text-sm text-slate-300">
+            전체 15개 조항을 한눈에 확인하고, 본문 내 키워드로 원하는 조항을 빠르게 검색할 수 있습니다.
+          </p>
+        </div>
+        <div class="text-xs sm:text-sm text-blue-100 bg-gov-800/80 border border-white/10 rounded-xl px-4 py-2.5 self-start sm:self-center">
+          <span class="block text-blue-300 text-xs">시행 예정일</span>
+          <span class="font-semibold">2026년 7월 1일</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 상단 고정 검색 및 결과 건수 영역 -->
+  <section
+    aria-label="조항 본문 검색"
+    class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm"
+  >
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+        <!-- 검색 입력창 컨테이너 -->
+        <div class="relative flex-1">
+          <label for="searchInput" class="sr-only">본문 키워드 검색</label>
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z" />
+            </svg>
+          </div>
+          <input
+            id="searchInput"
+            type="text"
+            autocomplete="off"
+            placeholder="본문 내 키워드를 입력하세요 (예: 대통령령, 행정안전부장관, 개인정보)"
+            class="w-full pl-11 pr-11 py-3 text-sm sm:text-base text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:bg-white focus:border-gov-600 focus:ring-2 focus:ring-gov-600/20 transition"
+          />
+          <!-- 검색어 초기화 버튼 -->
+          <button
+            id="clearBtn"
+            type="button"
+            aria-label="검색어 지우기"
+            class="hidden absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-700 transition"
+          >
+            <span class="p-1.5 rounded-lg hover:bg-slate-200/70">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </span>
+          </button>
+        </div>
+
+        <!-- 결과 조 수 표시 영역 -->
+        <div class="flex items-center justify-between md:justify-end gap-3 shrink-0">
+          <div
+            id="resultCountBadge"
+            role="status"
+            aria-live="polite"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gov-50 border border-gov-200 text-gov-800 text-sm font-semibold"
+          >
+            <span class="w-2 h-2 rounded-full bg-gov-600"></span>
+            <span id="resultCountText">결과 15건</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 빠른 검색 추천 키워드 -->
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-500 font-medium mr-1">추천 검색어:</span>
+        <button type="button" data-keyword="행정안전부장관" class="quick-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-gov-100 text-slate-700 hover:text-gov-800 transition">행정안전부장관</button>
+        <button type="button" data-keyword="대통령령" class="quick-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-gov-100 text-slate-700 hover:text-gov-800 transition">대통령령</button>
+        <button type="button" data-keyword="공동활용" class="quick-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-gov-100 text-slate-700 hover:text-gov-800 transition">공동활용</button>
+        <button type="button" data-keyword="데이터 표준" class="quick-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-gov-100 text-slate-700 hover:text-gov-800 transition">데이터 표준</button>
+        <button type="button" data-keyword="개인정보 보호법" class="quick-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-gov-100 text-slate-700 hover:text-gov-800 transition">개인정보 보호법</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 메인 조항 카드 그리드 영역 -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- 조항 카드 리스트 -->
+    <div
+      id="articlesGrid"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+    ></div>
+
+    <!-- 검색 결과 0건 빈 상태 안내 -->
+    <div
+      id="emptyState"
+      class="hidden bg-white border border-slate-200 rounded-2xl p-10 sm:p-14 text-center shadow-sm"
+    >
+      <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.172 9.172a4 4 0 015.656 0M21 21l-4.35-4.35M17.65 16.65A7.5 7.5 0 1110.5 3a7.5 7.5 0 017.15 13.65z" />
+        </svg>
+      </div>
+      <h2 class="text-base sm:text-lg font-semibold text-slate-800">
+        입력한 키워드가 본문에 포함된 조항이 없습니다.
+      </h2>
+      <p class="mt-1.5 text-sm text-slate-500">
+        다른 검색어를 입력하거나 검색어를 초기화해 전체 조항을 확인해 보세요.
+      </p>
+      <button
+        id="emptyResetBtn"
+        type="button"
+        class="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gov-700 hover:bg-gov-800 text-white text-sm font-medium transition shadow-sm"
+      >
+        전체 조항 보기
+      </button>
+    </div>
+  </main>
+
+  <!-- 복사 완료 토스트 메시지 -->
+  <div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium shadow-lg opacity-0 pointer-events-none transition-opacity duration-200"
+  >
+    조항 내용이 클립보드에 복사되었습니다.
+  </div>
+
+  <!-- 하단 푸터 -->
+  <footer class="border-t border-slate-200 bg-white mt-auto">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <span>행정정보 통합관리 및 공동활용 법령 조항 조회</span>
+      <span>총 15개 조항 수록</span>
+    </div>
+  </footer>
+
+  <script>
+    /**
+     * 원본 법령 조항 데이터 (15개 조항, 원문 그대로 유지)
+     */
+    const LAW_ARTICLES = [
+      {
+        "조": "제1조",
+        "제목": "목적",
+        "본문": "이 법은 행정정보의 통합관리와 공동활용에 관한 기본적인 사항을 정함으로써 행정의 효율성과 국민의 편익 증진에 이바지함을 목적으로 한다."
+      },
+      {
+        "조": "제2조",
+        "제목": "정의",
+        "본문": "이 법에서 사용하는 용어의 뜻은 다음 각 호와 같다.\n1. \"행정정보\"란 「전자정부법」 제2조제6호에 따른 행정정보를 말한다.\n2. \"공동활용\"이란 행정기관 간 행정정보를 상호 제공하여 사용하는 것을 말한다.\n3. \"통합관리\"란 「공공기록물 관리에 관한 법률」 제3조에 따른 기록물의 일부로 행정정보를 통합 관리하는 것을 말한다.\n4. \"데이터 표준\"이란 행정정보의 공동활용을 위한 형식·코드·식별자에 관한 표준을 말한다."
+      },
+      {
+        "조": "제3조",
+        "제목": "다른 법률과의 관계",
+        "본문": "행정정보의 통합관리 및 공동활용에 관하여 다른 법률에 특별한 규정이 있는 경우를 제외하고는 이 법에서 정하는 바에 따른다. 특히 「개인정보 보호법」, 「공공데이터의 제공 및 이용 활성화에 관한 법률」, 「지능정보화 기본법」에 따른 사항은 해당 법률을 우선 적용한다."
+      },
+      {
+        "조": "제4조",
+        "제목": "국가 등의 책무",
+        "본문": "국가와 지방자치단체는 행정정보의 통합관리와 공동활용을 위하여 필요한 시책을 수립하여야 한다. 행정안전부장관은 그 시책을 종합적으로 조정하며, 자세한 사항은 대통령령으로 정한다."
+      },
+      {
+        "조": "제5조",
+        "제목": "기본계획의 수립",
+        "본문": "① 행정안전부장관은 행정정보 통합관리 기본계획을 5년마다 수립하여야 한다.\n② 기본계획에는 다음 각 호의 사항을 포함하여야 한다.\n1. 행정정보 통합관리의 기본방향\n2. 행정정보 공동활용의 활성화 방안\n3. 「전자정부법」 제3조의 행정기관 정보화 시책과의 연계\n4. 그 밖에 대통령령으로 정하는 사항"
+      },
+      {
+        "조": "제6조",
+        "제목": "시행계획의 수립",
+        "본문": "행정기관의 장은 매년 시행계획을 수립하여야 하며, 그 결과를 행정안전부장관에게 보고하여야 한다. 시행계획의 형식과 절차는 대통령령으로 정한다."
+      },
+      {
+        "조": "제7조",
+        "제목": "공동활용 협의회",
+        "본문": "행정정보 공동활용에 관한 사항을 협의하기 위하여 행정안전부에 행정정보 공동활용 협의회를 둔다. 협의회의 구성과 운영에 필요한 사항은 대통령령으로 정한다."
+      },
+      {
+        "조": "제8조",
+        "제목": "공동활용 신청",
+        "본문": "행정기관의 장은 다른 행정기관이 보유한 행정정보를 활용하려는 경우에는 행정안전부장관에게 신청하여야 한다."
+      },
+      {
+        "조": "제9조",
+        "제목": "공동활용 승인",
+        "본문": "행정안전부장관은 신청을 받은 경우 「개인정보 보호법」 제17조에 따른 절차를 거쳐 30일 이내에 승인 여부를 결정하여야 한다."
+      },
+      {
+        "조": "제10조",
+        "제목": "보안 조치",
+        "본문": "공동활용 시 행정정보의 안전성 확보를 위하여 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 및 「개인정보 보호법」에서 정하는 보안 조치를 적용하여야 한다."
+      },
+      {
+        "조": "제11조",
+        "제목": "데이터 표준",
+        "본문": "행정안전부장관은 데이터 표준을 정하여 고시할 수 있다. 데이터 표준의 적용 범위와 시기는 대통령령으로 정한다."
+      },
+      {
+        "조": "제12조",
+        "제목": "표준 적용 의무",
+        "본문": "행정기관은 행정정보를 생산·관리·활용할 때 제11조에 따른 데이터 표준을 따라야 한다."
+      },
+      {
+        "조": "제13조",
+        "제목": "실태조사",
+        "본문": "행정안전부장관은 매년 행정정보 통합관리 실태를 조사하여 그 결과를 공개한다."
+      },
+      {
+        "조": "제14조",
+        "제목": "과태료",
+        "본문": "다음 각 호의 어느 하나에 해당하는 자에게는 1천만원 이하의 과태료를 부과한다.\n1. 제8조를 위반하여 승인 없이 공동활용한 자\n2. 제12조에 따른 데이터 표준을 정당한 사유 없이 위반한 자"
+      },
+      {
+        "조": "제15조",
+        "제목": "시행일",
+        "본문": "이 법은 2026년 7월 1일부터 시행한다."
+      }
+    ];
+
+    // DOM 요소 참조
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const resultCountText = document.getElementById('resultCountText');
+    const articlesGrid = document.getElementById('articlesGrid');
+    const emptyState = document.getElementById('emptyState');
+    const emptyResetBtn = document.getElementById('emptyResetBtn');
+    const toast = document.getElementById('toast');
+    const quickChips = document.querySelectorAll('.quick-chip');
+
+    let toastTimer = null;
+
+    /**
+     * XSS 방지를 위한 HTML 특수문자 이스케이프 함수
+     * @param {string} str - 원본 문자열
+     * @returns {string} 이스케이프된 안전한 문자열
+     */
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * 정규식 특수문자 이스케이프 함수
+     * @param {string} str - 검색어 문자열
+     * @returns {string} 정규식에 안전하게 사용할 수 있는 문자열
+     */
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+     * 본문 텍스트에서 검색 키워드를 안전하게 <mark>로 하이라이트 처리
+     * @param {string} bodyText - 조항 본문
+     * @param {string} keyword - 앞뒤 공백이 제거된 검색어
+     * @returns {string} 하이라이트가 적용된 안전한 HTML 문자열
+     */
+    function highlightBodyText(bodyText, keyword) {
+      const safeBody = escapeHtml(bodyText);
+      if (!keyword) {
+        return safeBody;
+      }
+      const safeKeyword = escapeHtml(keyword);
+      const regex = new RegExp(`(${escapeRegExp(safeKeyword)})`, 'gi');
+      return safeBody.replace(
+        regex,
+        '<mark class="bg-yellow-200 text-slate-900 px-0.5 rounded-sm font-medium">$1</mark>'
+      );
+    }
+
+    /**
+     * 토스트 알림 표시
+     * @param {string} message - 표시할 안내 문구
+     */
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      if (toastTimer) {
+        clearTimeout(toastTimer);
+      }
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2000);
+    }
+
+    /**
+     * 조항 텍스트를 클립보드에 복사 (iframe 호환 execCommand 방식 사용)
+     * @param {Object} article - 복사할 조항 객체
+     */
+    function copyArticle(article) {
+      const textToCopy = `${article.조}(${article.제목})\n${article.본문}`;
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(`${article.조} (${article.제목}) 내용이 복사되었습니다.`);
+      } catch (err) {
+        showToast('복사에 실패했습니다. 직접 선택하여 복사해 주세요.');
+      }
+    }
+
+    /**
+     * 필터링된 조항 목록을 카드 형태로 렌더링
+     * @param {string} rawQuery - 사용자 입력 검색어
+     */
+    function renderArticles(rawQuery = '') {
+      const keyword = rawQuery.trim();
+      const lowerKeyword = keyword.toLowerCase();
+
+      // 검색어 초기화 버튼 표시 여부 토글
+      if (rawQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      // 본문(item.본문) 기준 필터링
+      const filtered = keyword
+        ? LAW_ARTICLES.filter((item) => item.본문.toLowerCase().includes(lowerKeyword))
+        : LAW_ARTICLES;
+
+      // 결과 건수 실시간 업데이트
+      resultCountText.textContent = `결과 ${filtered.length}건`;
+
+      // 기존 카드 비우기
+      articlesGrid.innerHTML = '';
+
+      // 0건일 때 빈 상태 안내 표시
+      if (filtered.length === 0) {
+        articlesGrid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      articlesGrid.classList.remove('hidden');
+
+      // 문서 프래그먼트를 이용한 효율적인 카드 생성
+      const fragment = document.createDocumentFragment();
+
+      filtered.forEach((article) => {
+        const card = document.createElement('article');
+        card.className =
+          'bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-gov-200 transition flex flex-col justify-between';
+
+        // 카드 상단: 조 번호 뱃지 + 제목 + 복사 버튼
+        const header = document.createElement('div');
+        header.className = 'flex items-start justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-100';
+
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'flex items-center flex-wrap gap-2.5 min-w-0';
+
+        const badge = document.createElement('span');
+        badge.className =
+          'inline-flex items-center px-2.5 py-1 rounded-lg bg-gov-700 text-white text-xs font-semibold tracking-wide shrink-0';
+        badge.textContent = article.조;
+
+        const title = document.createElement('h2');
+        title.className = 'text-base sm:text-[17px] font-bold text-slate-900 leading-snug';
+        title.textContent = article.제목;
+
+        titleWrap.appendChild(badge);
+        titleWrap.appendChild(title);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.title = `${article.조} 내용 복사`;
+        copyBtn.setAttribute('aria-label', `${article.조} ${article.제목} 복사`);
+        copyBtn.className =
+          'p-2 -mr-1.5 -mt-1 rounded-lg text-slate-400 hover:text-gov-700 hover:bg-gov-50 transition shrink-0';
+        copyBtn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        `;
+        copyBtn.addEventListener('click', () => copyArticle(article));
+
+        header.appendChild(titleWrap);
+        header.appendChild(copyBtn);
+
+        // 카드 본문: 줄바꿈 유지를 위해 whitespace-pre-line 적용
+        const body = document.createElement('p');
+        body.className = 'text-sm sm:text-[15px] text-slate-700 leading-relaxed whitespace-pre-line break-keep';
+        body.innerHTML = highlightBodyText(article.본문, keyword);
+
+        card.appendChild(header);
+        card.appendChild(body);
+        fragment.appendChild(card);
+      });
+
+      articlesGrid.appendChild(fragment);
+    }
+
+    /**
+     * 검색어 초기화 핸들러
+     */
+    function resetSearch() {
+      searchInput.value = '';
+      renderArticles('');
+      searchInput.focus();
+    }
+
+    // 이벤트 리스너 등록
+    searchInput.addEventListener('input', (event) => {
+      renderArticles(event.target.value);
+    });
+
+    clearBtn.addEventListener('click', resetSearch);
+    emptyResetBtn.addEventListener('click', resetSearch);
+
+    // 추천 검색어 칩 클릭 시 해당 키워드로 즉시 검색
+    quickChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const kw = chip.getAttribute('data-keyword') || '';
+        searchInput.value = kw;
+        renderArticles(kw);
+        searchInput.focus();
+      });
+    });
+
+    // 초기 렌더링 (15개 전체 조항 표시)
+    renderArticles('');
+  </script>
+</body>
+</html>
